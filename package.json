@@ -1,16 +1,16 @@
 {
   "private": true,
-  "displayName": "Plugin Name",
-  "name": "homebridge-plugin-name",
+  "displayName": "Homebridge Sharp RS232",
+  "name": "homebridge-sharp-rs232",
   "version": "1.0.0",
-  "description": "A short description about what your plugin does.",
+  "description": "Control Sharp TVs using a serial connection.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
+    "url": "git://github.com/pkmnct/homebridge-sharp-rs232.git"
   },
   "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/pkmnct/homebridge-sharp-rs232/issues"
   },
   "engines": {
     "node": ">=10.17.0",
@@ -24,14 +24,19 @@
     "prepublishOnly": "npm run lint && npm run build"
   },
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "sharp",
+    "serial",
+    "rs232"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "serialport": "^8.0.8"
+  },
   "devDependencies": {
-    "@types/node": "^13.13.4",
-    "@typescript-eslint/eslint-plugin": "^2.30.0",
-    "@typescript-eslint/parser": "^2.30.0",
-    "eslint": "^6.8.0",
+    "@types/node": "^13.13.5",
+    "@typescript-eslint/eslint-plugin": "^2.31.0",
+    "@typescript-eslint/parser": "^2.31.0",
+    "eslint": "^7.0.0",
     "homebridge": "^1.0.4",
     "nodemon": "^2.0.3",
     "rimraf": "^3.0.2",

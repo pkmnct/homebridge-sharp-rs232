@@ -117,7 +117,7 @@ export class SharpRS232 implements AccessoryPlugin {
       }
     });
 
-    const command = value ? 'POWR1???\r' : 'POWR0???\r';
+    const command = value ? 'POWR0001\r' : 'POWR0000\r';
 
     port.write(command, handleError);
   }

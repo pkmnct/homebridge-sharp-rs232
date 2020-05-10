@@ -1,9 +1,9 @@
 import type { API } from 'homebridge';
-import { SharpRS232 } from './accessory'; 
+import { SharpSerial } from './accessory'; 
 
 /**
  * This method registers the accessory with Homebridge
  */
 export = (api: API) => {
-  api.registerAccessory('SharpRS232', SharpRS232);
+  api.registerAccessory('SharpSerial', SharpSerial);
 }

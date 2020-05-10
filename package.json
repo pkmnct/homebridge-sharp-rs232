@@ -1,15 +1,15 @@
 {
-  "displayName": "Homebridge Sharp RS232",
-  "name": "homebridge-sharp-rs232",
+  "displayName": "Homebridge Sharp Serial",
+  "name": "homebridge-sharp-serial",
   "version": "1.0.0",
   "description": "Control Sharp TVs using a serial connection.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/pkmnct/homebridge-sharp-rs232.git"
+    "url": "git://github.com/pkmnct/homebridge-sharp-serial.git"
   },
   "bugs": {
-    "url": "https://github.com/pkmnct/homebridge-sharp-rs232/issues"
+    "url": "https://github.com/pkmnct/homebridge-sharp-serial/issues"
   },
   "engines": {
     "node": ">=10.17.0",

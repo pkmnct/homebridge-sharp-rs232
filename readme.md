@@ -1,4 +1,4 @@
-# Homebridge Sharp RS232
+# Homebridge Sharp Serial
 
 This Homebridge plugin enables control of Sharp Televisions using a serial connection.
 

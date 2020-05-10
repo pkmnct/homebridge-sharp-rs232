@@ -1,7 +1,7 @@
 import { API, AccessoryConfig, AccessoryPlugin, Logging, Service, CharacteristicEventTypes, CharacteristicGetCallback, CharacteristicSetCallback, CharacteristicValue } from 'homebridge';
 import SerialPort from 'serialport';
 
-export class SharpRS232 implements AccessoryPlugin {
+export class SharpSerial implements AccessoryPlugin {
   private readonly log: Logging;
   private readonly name: string;
 
@@ -38,7 +38,7 @@ export class SharpRS232 implements AccessoryPlugin {
       delimiter: '\r',
     }));
 
-    this.log.debug('Sharp RS232 Plugin Loaded');
+    this.log.debug('Sharp Serial Plugin Loaded');
 
     this.informationService = new this.api.hap.Service.AccessoryInformation()
       .setCharacteristic(this.api.hap.Characteristic.Manufacturer, this.manufacturer)

@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "SharpRS232",
+  "pluginAlias": "SharpSerial",
   "pluginType": "accessory",
   "singular": true,
   "schema": {

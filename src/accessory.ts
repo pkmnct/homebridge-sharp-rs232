@@ -13,13 +13,14 @@ export class SharpRS232 implements AccessoryPlugin {
   private readonly model: string;
   private readonly path: string;
 
-  private port: SerialPort;
-  private parser: SerialPort.parsers.Readline;
+  private readonly port: SerialPort;
+  private readonly parser: SerialPort.parsers.Readline;
 
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.api = api;
 
+    // These should match the placeholders in config.schema.json
     this.name = config.name || 'Sharp TV';
     this.manufacturer = config.manufacturer || 'Sharp';
     this.model = config.model || 'Unknown';

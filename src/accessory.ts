@@ -15,6 +15,7 @@ export class SharpRS232 implements AccessoryPlugin {
 
   private port: SerialPort;
   private parser: SerialPort.parsers.Readline;
+  private sendCommand: Function;
 
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
@@ -37,6 +38,32 @@ export class SharpRS232 implements AccessoryPlugin {
     this.parser = this.port.pipe(new SerialPort.parsers.Readline({
       delimiter: '\r',
     }));
+
+    this.sendCommand = (command: string, callback: (error: null | Error, data: null | string) => void) => {
+      this.parser.on('data', (data: string) => {
+        this.log.info('Got data', data);
+        callback(null, data);
+      });
+
+      const sendCommand = () => this.port.write(command, (error) => {
+        if (error) {
+          this.log.error(error.message);
+          callback(error, null);
+        }
+      });
+
+      if (this.port.isOpen) {
+        sendCommand();
+      } else {
+        this.port.open((error) => {
+          if (error) {
+            this.log.error(error.message);
+          } else {
+            sendCommand();
+          }
+        });
+      }
+    };
 
     this.log.debug('Sharp RS232 Plugin Loaded');
 
@@ -67,40 +94,21 @@ export class SharpRS232 implements AccessoryPlugin {
   getOnHandler(callback: CharacteristicGetCallback) {
     this.log.info('Getting switch state');
 
-    const handleError = (error: Error | null | undefined) => {
-      this.port.close((portCloseError) => {
-        if (portCloseError) {
-          this.log.error(portCloseError.message);
-        }
-      });
-      if (error) {
-        this.log.error(error.message);
+    this.sendCommand('POWR????\r', (error: null | Error, data: null | string) => {
+      if (error || !data) {
         callback(error, false);
-      }
-    };
-
-    this.parser.on('data', (data: string) => {
-      this.log.info('Got data', data);
-      this.port.close(handleError);
-
-      if (data.includes('1') || data.includes('0')) {
-        const value = data.includes('1') ? true : false;
-  
-        // the first argument of the callback should be null if there are no errors
-        // the second argument contains the current status of the device to return.
-        callback(null, value);
       } else {
-        const errorMessage = `Serial command returned '${data}'`;
-        this.log.error(errorMessage);
-        callback (new Error(errorMessage), false);
-      }
-    });
-
-    this.port.open((error) => {
-      if (error) {
-        handleError(error);
-      } else {
-        this.port.write('POWR????\r', handleError);
+        if (data.includes('1') || data.includes('0')) {
+          const value = data.includes('1') ? true : false;
+    
+          // the first argument of the callback should be null if there are no errors
+          // the second argument contains the current status of the device to return.
+          callback(null, value);
+        } else {
+          const errorMessage = `Serial command returned '${data}'`;
+          this.log.error(errorMessage);
+          callback (new Error(errorMessage), false);
+        }
       }
     });
   }
@@ -108,39 +116,20 @@ export class SharpRS232 implements AccessoryPlugin {
   setOnHandler(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.log.info('Setting switch state to:', value);
 
-    const handleError = (error: Error | null | undefined) => {
-      this.port.close((portCloseError) => {
-        if (portCloseError) {
-          this.log.error(portCloseError.message);
-        }
-      });
-      if (error) {
-        this.log.error(error.message);
-        callback(error);
-      }
-    };
-
-    this.parser.on('data', (data: string) => {
-      this.log.info('Got data', data);
-      this.port.close(handleError);
-
-      if (data.includes('OK')) {
-        // the first argument of the callback should be null if there are no errors
-        callback(null);
-      } else {
-        const errorMessage = `Serial command returned '${data}'`;
-        this.log.error(errorMessage);
-        callback (new Error(errorMessage));
-      }
-    });
-
     const command = value ? 'POWR0   \r' : 'POWR0   \r';
 
-    this.port.open((error) => {
-      if (error) {
-        handleError(error);
+    this.sendCommand(command, (error: null | Error, data: null | string) => {
+      if (error || !data) {
+        callback(error);
       } else {
-        this.port.write(command, handleError);
+        if (data.includes('OK')) {
+        // the first argument of the callback should be null if there are no errors
+          callback(null);
+        } else {
+          const errorMessage = `Serial command returned '${data}'`;
+          this.log.error(errorMessage);
+          callback (new Error(errorMessage));
+        }
       }
     });
   }

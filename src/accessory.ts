@@ -68,6 +68,11 @@ export class SharpRS232 implements AccessoryPlugin {
     this.log.info('Getting switch state');
 
     const handleError = (error: Error | null | undefined) => {
+      this.port.close((portCloseError) => {
+        if (portCloseError) {
+          this.log.error(portCloseError.message);
+        }
+      });
       if (error) {
         this.log.error(error.message);
         callback(error, false);
@@ -104,6 +109,11 @@ export class SharpRS232 implements AccessoryPlugin {
     this.log.info('Setting switch state to:', value);
 
     const handleError = (error: Error | null | undefined) => {
+      this.port.close((portCloseError) => {
+        if (portCloseError) {
+          this.log.error(portCloseError.message);
+        }
+      });
       if (error) {
         this.log.error(error.message);
         callback(error);

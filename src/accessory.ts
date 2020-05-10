@@ -1,9 +1,6 @@
 import { API, AccessoryConfig, AccessoryPlugin, Logging, Service, CharacteristicEventTypes, CharacteristicGetCallback, CharacteristicSetCallback, CharacteristicValue } from 'homebridge';
 import SerialPort from 'serialport';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Readline = require('@serialport/parser-readline');
-
 export class SharpRS232 implements AccessoryPlugin {
   private readonly log: Logging;
   private readonly name: string;
@@ -16,6 +13,9 @@ export class SharpRS232 implements AccessoryPlugin {
   private readonly model: string;
   private readonly path: string;
 
+  private port: SerialPort;
+  private parser: SerialPort.parsers.Readline;
+
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.api = api;
@@ -24,6 +24,19 @@ export class SharpRS232 implements AccessoryPlugin {
     this.manufacturer = config.manufacturer || 'Sharp';
     this.model = config.model || 'Unknown';
     this.path = config.path || '/dev/ttyUSB0';
+
+    this.port = new SerialPort(this.path, {
+      baudRate: 9600,
+      autoOpen: false,
+    }, (error: Error | null | undefined) => {
+      if (error) {
+        this.log.error(error.message);
+      }
+    });
+
+    this.parser = this.port.pipe(new SerialPort.parsers.Readline({
+      delimiter: '\r',
+    }));
 
     this.log.debug('Sharp RS232 Plugin Loaded');
 
@@ -61,30 +74,24 @@ export class SharpRS232 implements AccessoryPlugin {
       }
     };
 
-    const port = new SerialPort(this.path, {
-      baudRate: 9600,
-    }, handleError);
-
-    const parser = port.pipe(new Readline({
-      delimiter: '\r',
-    }));
-
-    parser.on('data', (data: string) => {
+    this.parser.on('data', (data: string) => {
       this.log.info('Got data', data);
-      port.close(handleError);
+      this.port.close(handleError);
 
-      if (data.includes('ERR')) {
-        callback (new Error('Serial command returned ERR'), false);
-      } else {
+      if (data.includes('1') || data.includes('0')) {
         const value = data.includes('1') ? true : false;
   
         // the first argument of the callback should be null if there are no errors
         // the second argument contains the current status of the device to return.
         callback(null, value);
+      } else {
+        const errorMessage = `Serial command returned '${data}'`;
+        this.log.error(errorMessage);
+        callback (new Error(errorMessage), false);
       }
     });
 
-    port.write('POWR????\r', handleError);
+    this.port.write('POWR????\r', handleError);
   }
 
   setOnHandler(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -97,28 +104,21 @@ export class SharpRS232 implements AccessoryPlugin {
       }
     };
 
-    const port = new SerialPort(this.path, {
-      baudRate: 9600,
-    }, handleError);
-
-    const parser = port.pipe(new Readline({
-      delimiter: '\r',
-    }));
-
-    parser.on('data', (data: string) => {
+    this.parser.on('data', (data: string) => {
       this.log.info('Got data', data);
-      port.close(handleError);
+      this.port.close(handleError);
 
-      if (data.includes('ERR')) {
-        callback (new Error('Serial command returned ERR'));
-      } else {  
+      if (data.includes('OK')) {
         // the first argument of the callback should be null if there are no errors
         callback(null);
+      } else {
+        const errorMessage = `Serial command returned '${data}'`;
+        this.log.error(errorMessage);
+        callback (new Error(errorMessage));
       }
     });
 
-    const command = value ? 'POWR0001\r' : 'POWR0000\r';
-
-    port.write(command, handleError);
+    const command = value ? 'POWR0   \r' : 'POWR0   \r';
+    this.port.write(command, handleError);
   }
 }

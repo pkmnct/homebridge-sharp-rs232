@@ -91,7 +91,13 @@ export class SharpRS232 implements AccessoryPlugin {
       }
     });
 
-    this.port.write('POWR????\r', handleError);
+    this.port.open((error) => {
+      if (error) {
+        handleError(error);
+      } else {
+        this.port.write('POWR????\r', handleError);
+      }
+    });
   }
 
   setOnHandler(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -119,6 +125,13 @@ export class SharpRS232 implements AccessoryPlugin {
     });
 
     const command = value ? 'POWR0   \r' : 'POWR0   \r';
-    this.port.write(command, handleError);
+
+    this.port.open((error) => {
+      if (error) {
+        handleError(error);
+      } else {
+        this.port.write(command, handleError);
+      }
+    });
   }
 }

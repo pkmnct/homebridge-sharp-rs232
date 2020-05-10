@@ -1,5 +1,4 @@
 {
-  "private": true,
   "displayName": "Homebridge Sharp RS232",
   "name": "homebridge-sharp-rs232",
   "version": "1.0.0",

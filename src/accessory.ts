@@ -73,11 +73,15 @@ export class SharpRS232 implements AccessoryPlugin {
       this.log.info('Got data', data);
       port.close(handleError);
 
-      const value = data.includes('1') ? true : false;
-
-      // the first argument of the callback should be null if there are no errors
-      // the second argument contains the current status of the device to return.
-      callback(null, value);
+      if (data.includes('ERR')) {
+        callback (new Error('Serial command returned ERR'), false);
+      } else {
+        const value = data.includes('1') ? true : false;
+  
+        // the first argument of the callback should be null if there are no errors
+        // the second argument contains the current status of the device to return.
+        callback(null, value);
+      }
     });
 
     port.write('POWR????\r', handleError);
@@ -105,8 +109,12 @@ export class SharpRS232 implements AccessoryPlugin {
       this.log.info('Got data', data);
       port.close(handleError);
 
-      // the first argument of the callback should be null if there are no errors
-      callback(null);
+      if (data.includes('ERR')) {
+        callback (new Error('Serial command returned ERR'));
+      } else {  
+        // the first argument of the callback should be null if there are no errors
+        callback(null);
+      }
     });
 
     const command = value ? 'POWR1???\r' : 'POWR0???\r';

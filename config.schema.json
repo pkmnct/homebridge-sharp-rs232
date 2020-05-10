@@ -1,6 +1,6 @@
 {
   "pluginAlias": "SharpRS232",
-  "pluginType": "platform",
+  "pluginType": "accessory",
   "singular": true,
   "schema": {
     "type": "object",
@@ -9,25 +9,25 @@
         "title": "Name",
         "type": "string",
         "required": false,
-        "default": "Sharp TV"
+        "placeholder": "Sharp TV"
       },
       "manufacturer": {
         "title": "Manufacturer",
         "type": "string",
         "required": false,
-        "default": "Sharp"
+        "placeholder": "Sharp"
       },
       "model": {
         "title": "Model",
         "type": "string",
         "required": false,
-        "default": "Unknown"
+        "placeholder": "Unknown"
       },
       "path": {
         "title": "Path to Serial Port",
         "type": "string",
         "required": false,
-        "default": "/dev/ttyUSB0"
+        "placeholder": "/dev/ttyUSB0"
       }
     }
   }

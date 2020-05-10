@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "SharpRS232",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -8,8 +8,26 @@
       "name": {
         "title": "Name",
         "type": "string",
-        "required": true,
-        "default": "Example Dynamic Platform"
+        "required": false,
+        "default": "Sharp TV"
+      },
+      "manufacturer": {
+        "title": "Manufacturer",
+        "type": "string",
+        "required": false,
+        "default": "Sharp"
+      },
+      "model": {
+        "title": "Model",
+        "type": "string",
+        "required": false,
+        "default": "Unknown"
+      },
+      "path": {
+        "title": "Path to Serial Port",
+        "type": "string",
+        "required": false,
+        "default": "/dev/ttyUSB0"
       }
     }
   }

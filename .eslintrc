@@ -23,7 +23,6 @@
     "curly": ["warn", "all"],
     "brace-style": ["warn"],
     "prefer-arrow-callback": ["warn"],
-    "max-len": ["warn", 140],
     "no-console": ["warn"], // use the provided Homebridge log method instead
     "lines-between-class-members": ["warn", "always", {"exceptAfterSingleLine": true}],
     "@typescript-eslint/explicit-function-return-type": "off",

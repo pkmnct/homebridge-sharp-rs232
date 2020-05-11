@@ -60,14 +60,11 @@
                       { "title": "Application", "enum": [10] }
                     ]
                   },
-                  "command": {
-                    "title": "Command(s)",
-                    "type": "array",
-                    "items": {
-                      "title": "Serial Command",
-                      "type": "string"
-                    },
-                    "required": ["items"]
+                  "id": {
+                    "title": "Input ID",
+                    "description": "0 will be TV Tuner, 1-8 will be inputs",
+                    "type": "integer",
+                    "required": true
                   }
                 }
               }

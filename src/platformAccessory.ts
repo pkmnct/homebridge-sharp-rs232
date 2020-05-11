@@ -136,10 +136,10 @@ export class Television {
     };
 
     this.parser.once('data', (data: string) => {
-      this.platform.log.debug('Got data', data);
+      this.platform.log.info('Got data', data);
 
       if (data.includes('OK')) {
-        this.platform.log.debug('Set Characteristic Active ->', value);
+        this.platform.log.info('Set Characteristic Active ->', value);
 
         // the first argument of the callback should be null if there are no errors
         callback(null);
@@ -176,12 +176,12 @@ export class Television {
     };
 
     this.parser.once('data', (data: string) => {
-      this.platform.log.debug('Got data', data);
+      this.platform.log.info('Got data', data);
 
       if (data.includes('1') || data.includes('0')) {
         const value = data.includes('1') ? true : false;
 
-        this.platform.log.debug('Get Characteristic Active ->', value);
+        this.platform.log.info('Get Characteristic Active ->', value);
   
         // the first argument of the callback should be null if there are no errors
         // the second argument contains the current status of the device to return.
@@ -206,13 +206,33 @@ export class Television {
   ) {
     const thisInput = this.accessory.context.device.inputs[value as number];
 
-    this.platform.log.debug(
-      'Set Characteristic Active Identifier -> ',
-      value,
-    );
+    const handleError = (error: Error | null | undefined) => {
+      if (error) {
+        this.platform.log.error(error.message);
+        callback(error);
+      }
+    };
 
-    // you must call the callback function
-    callback(null);
+    this.parser.once('data', (data: string) => {
+      this.platform.log.info('Got data', data);
+
+      if (data.includes('OK')) {
+        this.platform.log.info(
+          'Set Characteristic Active Identifier -> ',
+          value,
+        );
+
+        // the first argument of the callback should be null if there are no errors
+        callback(null);
+      } else {
+        const errorMessage = `Serial command returned '${data}'`;
+        this.platform.log.error(errorMessage);
+        callback (new Error(errorMessage));
+      }
+    });
+
+    const command = thisInput.id === 0 ? 'ITVD0   ' : `IAVD${thisInput.id}   `;
+    this.port.write(command, handleError);
   }
 
   /**
@@ -222,15 +242,32 @@ export class Television {
   getActiveIdentifier(
     callback: CharacteristicSetCallback,
   ) {
+    const handleError = (error: Error | null | undefined) => {
+      if (error) {
+        this.platform.log.error(error.message);
+        callback(error, false);
+      }
+    };
 
-    const value = 0;
+    this.parser.once('data', (data: string) => {
+      this.platform.log.info('Got data', data);
 
-    this.platform.log.debug(
-      'Get Characteristic Active Identifier -> ',
-      value,
-    );
+      // eslint-disable-next-line no-constant-condition
+      if (false) {
+        const value = data.includes('1') ? true : false;
 
-    // you must call the callback function
-    callback(null, value);
+        this.platform.log.info('Get Characteristic ActiveIdentifier ->', value);
+  
+        // the first argument of the callback should be null if there are no errors
+        // the second argument contains the current status of the device to return.
+        callback(null, value);
+      } else {
+        const errorMessage = `Serial command returned '${data}'`;
+        this.platform.log.error(errorMessage);
+        callback (new Error(errorMessage), 0);
+      }
+    });
+
+    this.port.write('ITGD????\r', handleError);
   }
 }

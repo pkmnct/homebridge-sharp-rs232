@@ -90,7 +90,7 @@ export class Television {
       .on(CharacteristicEventTypes.GET, this.getActiveIdentifier.bind(this)); // GET - bind to the `getActiveIdentifier` method below
 
     // register inputs
-    accessory.context.device.inputs.forEach(
+    accessory.context.device.inputs && accessory.context.device.inputs.forEach(
       (
         input: {
           id: string;

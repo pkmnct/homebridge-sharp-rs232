@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge Sharp Serial",
   "name": "homebridge-sharp-serial",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Control Sharp TVs using a serial connection.",
   "license": "Apache-2.0",
   "repository": {

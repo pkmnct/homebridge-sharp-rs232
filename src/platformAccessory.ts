@@ -6,6 +6,7 @@ import type {
   CharacteristicSetCallback,
   CharacteristicGetCallback,
 } from 'homebridge';
+import SerialPort from 'serialport';
 
 import { SharpSerial } from './platform';
 
@@ -17,19 +18,27 @@ import { SharpSerial } from './platform';
 export class Television {
   private service: Service;
 
-  /**
-   * These are just used to create a working example
-   * You should implement your own code to track the state of your accessory
-   */
-  private states = {
-    Active: false,
-    ActiveIdentifier: 0,
-  };
+  private readonly port: SerialPort;
+  private readonly parser: SerialPort.parsers.Readline;
 
   constructor(
     private readonly platform: SharpSerial,
     private readonly accessory: PlatformAccessory,
   ) {
+
+    // Initialize Serial Port
+    this.port = new SerialPort(accessory.context.device.path || '/dev/ttyUSB0', {
+      baudRate: accessory.context.device.baudRate || 9600,
+    }, (error: Error | null | undefined) => {
+      if (error) {
+        this.platform.log.error(error.message);
+      }
+    });
+
+    // Initialize Parser
+    this.parser = this.port.pipe(new SerialPort.parsers.Readline({
+      delimiter: '\r',
+    }));
 
     // set accessory information
     this.accessory
@@ -77,7 +86,8 @@ export class Television {
     // register handlers for the ActiveIdentifier Characteristic (input events)
     this.service
       .getCharacteristic(this.platform.Characteristic.ActiveIdentifier)
-      .on(CharacteristicEventTypes.SET, this.setActiveIdentifier.bind(this)); // SET - bind to the 'setBrightness` method below
+      .on(CharacteristicEventTypes.SET, this.setActiveIdentifier.bind(this)) // SET - bind to the 'setActiveIdentifier` method below
+      .on(CharacteristicEventTypes.GET, this.getActiveIdentifier.bind(this)); // GET - bind to the `getActiveIdentifier` method below
 
     // register inputs
     accessory.context.device.inputs.forEach(
@@ -118,9 +128,30 @@ export class Television {
    * These are sent when the user changes the state of an accessory.
    */
   setActive(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.platform.log.debug('Set Characteristic Active ->', value);
+    const handleError = (error: Error | null | undefined) => {
+      if (error) {
+        this.platform.log.error(error.message);
+        callback(error);
+      }
+    };
 
-    callback(null);
+    this.parser.once('data', (data: string) => {
+      this.platform.log.debug('Got data', data);
+
+      if (data.includes('OK')) {
+        this.platform.log.debug('Set Characteristic Active ->', value);
+
+        // the first argument of the callback should be null if there are no errors
+        callback(null);
+      } else {
+        const errorMessage = `Serial command returned '${data}'`;
+        this.platform.log.error(errorMessage);
+        callback (new Error(errorMessage));
+      }
+    });
+
+    const command = value ? 'POWR1   \r' : 'POWR0   \r';
+    this.port.write(command, handleError);
   }
 
   /**
@@ -137,14 +168,32 @@ export class Television {
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   getActive(callback: CharacteristicGetCallback) {
-    const isOn = this.states.Active;
+    const handleError = (error: Error | null | undefined) => {
+      if (error) {
+        this.platform.log.error(error.message);
+        callback(error, false);
+      }
+    };
 
-    this.platform.log.debug('Get Characteristic On ->', isOn);
+    this.parser.once('data', (data: string) => {
+      this.platform.log.debug('Got data', data);
 
-    // you must call the callback function
-    // the first argument should be null if there were no errors
-    // the second argument should be the value to return
-    callback(null, isOn);
+      if (data.includes('1') || data.includes('0')) {
+        const value = data.includes('1') ? true : false;
+
+        this.platform.log.debug('Get Characteristic Active ->', value);
+  
+        // the first argument of the callback should be null if there are no errors
+        // the second argument contains the current status of the device to return.
+        callback(null, value);
+      } else {
+        const errorMessage = `Serial command returned '${data}'`;
+        this.platform.log.error(errorMessage);
+        callback (new Error(errorMessage), false);
+      }
+    });
+
+    this.port.write('POWR????\r', handleError);
   }
 
   /**
@@ -161,11 +210,27 @@ export class Television {
       'Set Characteristic Active Identifier -> ',
       value,
     );
-    
-    // Store the selected input in state
-    this.states.ActiveIdentifier = value as number;
 
     // you must call the callback function
     callback(null);
+  }
+
+  /**
+   * Handle "GET" requests from HomeKit
+   * These are sent when the user changes the state of an accessory.
+   */
+  getActiveIdentifier(
+    callback: CharacteristicSetCallback,
+  ) {
+
+    const value = 0;
+
+    this.platform.log.debug(
+      'Get Characteristic Active Identifier -> ',
+      value,
+    );
+
+    // you must call the callback function
+    callback(null, value);
   }
 }

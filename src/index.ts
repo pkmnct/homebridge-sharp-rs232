@@ -1,9 +1,11 @@
 import type { API } from 'homebridge';
-import { SharpSerial } from './accessory'; 
+
+import { PLATFORM_NAME } from './settings';
+import { SharpSerial } from './platform';
 
 /**
- * This method registers the accessory with Homebridge
+ * This method registers the platform with Homebridge
  */
 export = (api: API) => {
-  api.registerAccessory('SharpSerial', SharpSerial);
-}
+  api.registerPlatform(PLATFORM_NAME, SharpSerial);
+};

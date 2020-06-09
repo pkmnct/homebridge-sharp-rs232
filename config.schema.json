@@ -62,7 +62,7 @@
                   },
                   "id": {
                     "title": "Input ID",
-                    "description": "0 will be TV Tuner, 1-8 will be inputs",
+                    "description": "1-8",
                     "type": "integer",
                     "required": true
                   }

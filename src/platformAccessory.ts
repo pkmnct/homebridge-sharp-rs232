@@ -20,18 +20,29 @@ export class Television {
 
   private readonly port: SerialPort;
   private readonly parser: SerialPort.parsers.Readline;
+  private readonly baudRate: number;
+  private readonly path: string;
 
   constructor(
     private readonly platform: SharpSerial,
     private readonly accessory: PlatformAccessory,
   ) {
 
+    this.baudRate = accessory.context.device.baudRate || 9600;
+    this.path = accessory.context.device.path || '/dev/ttyUSB0';
+
     // Initialize Serial Port
-    this.port = new SerialPort(accessory.context.device.path || '/dev/ttyUSB0', {
-      baudRate: accessory.context.device.baudRate || 9600,
+    this.port = new SerialPort(this.path, {
+      baudRate: this.baudRate,
+      dataBits: 8,
+      parity: 'none',
+      stopBits: 1,
+      rtscts: false,
     }, (error: Error | null | undefined) => {
       if (error) {
         this.platform.log.error(error.message);
+      } else {
+        this.platform.log.debug(`Initialized serial port at ${this.path} with baud rate of ${this.baudRate}`);
       }
     });
 
@@ -136,21 +147,20 @@ export class Television {
     };
 
     this.parser.once('data', (data: string) => {
-      this.platform.log.info('Got data', data);
-
       if (data.includes('OK')) {
-        this.platform.log.info('Set Characteristic Active ->', value);
+        this.platform.log.debug('Set Characteristic Active ->', value);
 
         // the first argument of the callback should be null if there are no errors
         callback(null);
       } else {
-        const errorMessage = `Serial command returned '${data}'`;
+        const errorMessage = `While attempting to set the power state, the serial command returned '${data}'`;
         this.platform.log.error(errorMessage);
         callback (new Error(errorMessage));
       }
     });
 
     const command = value ? 'POWR1   \r' : 'POWR0   \r';
+    this.platform.log.debug('Sending command: ', command);
     this.port.write(command, handleError);
   }
 
@@ -175,25 +185,27 @@ export class Television {
       }
     };
 
-    this.parser.once('data', (data: string) => {
-      this.platform.log.info('Got data', data);
+    this.platform.log.debug('Getting power state from TV');
 
-      if (data.includes('1') || data.includes('0')) {
+    this.parser.once('data', (data: string) => {
+      if (data.includes('1') || data.includes('0') && !data.includes('000')) {
         const value = data.includes('1') ? true : false;
 
-        this.platform.log.info('Get Characteristic Active ->', value);
+        this.platform.log.debug('Get Characteristic Active ->', value);
   
         // the first argument of the callback should be null if there are no errors
         // the second argument contains the current status of the device to return.
         callback(null, value);
       } else {
-        const errorMessage = `Serial command returned '${data}'`;
+        const errorMessage = `While attempting to get the power state, the serial command returned '${data}'`;
         this.platform.log.error(errorMessage);
         callback (new Error(errorMessage), false);
       }
     });
 
-    this.port.write('POWR????\r', handleError);
+    const command = 'POWR????\r';
+    this.platform.log.debug('Sending command: ', command);
+    this.port.write(command, handleError);
   }
 
   /**
@@ -214,10 +226,8 @@ export class Television {
     };
 
     this.parser.once('data', (data: string) => {
-      this.platform.log.info('Got data', data);
-
-      if (data.includes('OK')) {
-        this.platform.log.info(
+      if (data) {
+        this.platform.log.debug(
           'Set Characteristic Active Identifier -> ',
           value,
         );
@@ -225,13 +235,14 @@ export class Television {
         // the first argument of the callback should be null if there are no errors
         callback(null);
       } else {
-        const errorMessage = `Serial command returned '${data}'`;
+        const errorMessage = `While attempting to set the input, the serial command returned '${data}'`;
         this.platform.log.error(errorMessage);
         callback (new Error(errorMessage));
       }
     });
 
-    const command = thisInput.id === 0 ? 'ITVD0   ' : `IAVD${thisInput.id}   `;
+    const command = `IAVD${thisInput.id}   \r`;
+    this.platform.log.debug('Sending command: ', command);
     this.port.write(command, handleError);
   }
 
@@ -249,25 +260,34 @@ export class Television {
       }
     };
 
-    this.parser.once('data', (data: string) => {
-      this.platform.log.info('Got data', data);
+    // TODO: The setTimeout is used because Homebridge queries both the power state and input state at the same time, and one command ends
+    // up getting lost.
+    // TODO: Need to add some kind of delay/cache the state when the TV is turned off
+    setTimeout(() => {
+      this.platform.log.debug('Getting input state from TV');
 
-      // eslint-disable-next-line no-constant-condition
-      if (false) {
-        const value = data.includes('1') ? true : false;
+      this.parser.once('data', (data: string) => {
+        if (data.includes('0001') || data.includes('0002') || data.includes('0003') || data.includes('0004') || data.includes('0005') || data.includes('0006') || data.includes('0007') || data.includes('0008')) {
+          const id = parseInt(data);
 
-        this.platform.log.info('Get Characteristic ActiveIdentifier ->', value);
-  
-        // the first argument of the callback should be null if there are no errors
-        // the second argument contains the current status of the device to return.
-        callback(null, value);
-      } else {
-        const errorMessage = `Serial command returned '${data}'`;
-        this.platform.log.error(errorMessage);
-        callback (new Error(errorMessage), 0);
-      }
-    });
+          // Get the internal ID of the input with the ID that matches what the TV returned
+          const value = this.accessory.context.device.inputs.findIndex((input: any) => input.id === id);
 
-    this.port.write('ITGD????\r', handleError);
+          this.platform.log.debug('Get Characteristic ActiveIdentifier ->', value);
+    
+          // the first argument of the callback should be null if there are no errors
+          // the second argument contains the current status of the device to return.
+          callback(null, value);
+        } else {
+          const errorMessage = `While attempting to get input state, serial command returned '${data}'`;
+          this.platform.log.error(errorMessage);
+          callback (new Error(errorMessage), 0);
+        }
+      });
+
+      const command = 'IAVD?   \r';
+      this.platform.log.debug('Sending command: ', command);
+      this.port.write(command, handleError);
+    }, 1000);
   }
 }

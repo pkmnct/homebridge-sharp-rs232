@@ -9,6 +9,5 @@ This should work with any Sharp TV that uses the following for serial control:
 - Getting TV State: `POWR????`
 - Turning on TV: `POWR1`
 - Turning off TV: `POWR0`
-
-## Future
-I may look into implementing this as a [Television Service](https://developers.homebridge.io/#/service/Television) in the future. It is not a high priority due to my personal use of the plugin.
+- Getting Input State `IAVD?`
+- Switching Input: `IAVD000X` where `X` is the input ID number (1-8 currently supported)

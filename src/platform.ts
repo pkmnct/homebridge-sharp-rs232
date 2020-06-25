@@ -44,7 +44,7 @@ export class SharpSerial implements DynamicPlatformPlugin {
    * This function is invoked when homebridge restores cached accessories from disk at startup.
    * It should be used to setup event handlers for characteristics and update respective values.
    */
-  configureAccessory(accessory: PlatformAccessory) {
+  configureAccessory(accessory: PlatformAccessory): void {
     this.log.info('Restoring accessory from cache:', accessory.displayName);
 
     // create the accessory handler
@@ -60,7 +60,7 @@ export class SharpSerial implements DynamicPlatformPlugin {
    * Accessories must only be registered once, previously created accessories
    * must not be registered again to prevent "duplicate UUID" errors.
    */
-  discoverDevices() {
+  discoverDevices(): void {
     // loop over the configured devices and register each one if it has not already been registered
     for (const device of this.config.devices) {
       // generate a unique id for the accessory this should be generated from

@@ -121,7 +121,7 @@ export class Television {
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory.
    */
-  setActive(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  setActive(value: CharacteristicValue, callback: CharacteristicSetCallback): void {
     const command = value ? 'POWR1   \r' : 'POWR0   \r';
 
     this.serial.send(command, (data: string) => {
@@ -151,7 +151,7 @@ export class Television {
    * @example
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
-  getActive(callback: CharacteristicGetCallback) {
+  getActive(callback: CharacteristicGetCallback): void {
     this.platform.log.debug('Getting power state from TV');
 
     const command = 'POWR????\r';
@@ -179,7 +179,7 @@ export class Television {
   setActiveIdentifier(
     value: CharacteristicValue,
     callback: CharacteristicSetCallback,
-  ) {
+  ): void {
     const thisInput = this.accessory.context.device.inputs[value as number];
 
     const command = `IAVD${thisInput.id}   \r`;
@@ -209,7 +209,7 @@ export class Television {
    */
   getActiveIdentifier(
     callback: CharacteristicSetCallback,
-  ) {
+  ): void {
     this.platform.log.debug('Getting input state from TV');
 
     const command = 'IAVD?   \r';

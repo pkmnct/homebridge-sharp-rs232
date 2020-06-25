@@ -218,7 +218,7 @@ export class Television {
         const id = parseInt(data);
 
         // Get the internal ID of the input with the ID that matches what the TV returned
-        const value = this.accessory.context.device.inputs.findIndex((input: any) => input.id === id);
+        const value = this.accessory.context.device.inputs.findIndex((input: { id: number }) => input.id === id);
 
         this.platform.log.info('Get Characteristic ActiveIdentifier ->', value);
     

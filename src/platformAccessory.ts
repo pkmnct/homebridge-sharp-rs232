@@ -6,9 +6,8 @@ import type {
   CharacteristicSetCallback,
   CharacteristicGetCallback,
 } from 'homebridge';
-import SerialPort from 'serialport';
-
 import { SharpSerial } from './platform';
+import { SerialProtocol } from './protocols/serial';
 
 /**
  * Platform Accessory
@@ -18,45 +17,29 @@ import { SharpSerial } from './platform';
 export class Television {
   private service: Service;
 
-  private readonly port: SerialPort;
-  private readonly parser: SerialPort.parsers.Readline;
-  private readonly baudRate: number;
+  // We will cache the current input since it cannot be queried while TV is off
+  private states = {
+    ActiveIdentifier: 0,
+  }
+
   private readonly path: string;
+  private readonly serial: SerialProtocol;
 
   constructor(
     private readonly platform: SharpSerial,
     private readonly accessory: PlatformAccessory,
   ) {
-
-    this.baudRate = accessory.context.device.baudRate || 9600;
     this.path = accessory.context.device.path || '/dev/ttyUSB0';
 
     // Initialize Serial Port
-    this.port = new SerialPort(this.path, {
-      baudRate: this.baudRate,
-      dataBits: 8,
-      parity: 'none',
-      stopBits: 1,
-      rtscts: false,
-    }, (error: Error | null | undefined) => {
-      if (error) {
-        this.platform.log.error(error.message);
-      } else {
-        this.platform.log.debug(`Initialized serial port at ${this.path} with baud rate of ${this.baudRate}`);
-      }
-    });
-
-    // Initialize Parser
-    this.parser = this.port.pipe(new SerialPort.parsers.Readline({
-      delimiter: '\r',
-    }));
+    this.serial = new SerialProtocol(this.path, this.platform.log);
 
     // set accessory information
     this.accessory
       .getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(
         this.platform.Characteristic.Manufacturer,
-        accessory.context.device.manufacturer || 'Unknown',
+        accessory.context.device.manufacturer || 'Sharp',
       )
       .setCharacteristic(
         this.platform.Characteristic.Model,
@@ -139,14 +122,9 @@ export class Television {
    * These are sent when the user changes the state of an accessory.
    */
   setActive(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    const handleError = (error: Error | null | undefined) => {
-      if (error) {
-        this.platform.log.error(error.message);
-        callback(error);
-      }
-    };
+    const command = value ? 'POWR1   \r' : 'POWR0   \r';
 
-    this.parser.once('data', (data: string) => {
+    this.serial.send(command, (data: string) => {
       if (data.includes('OK')) {
         this.platform.log.debug('Set Characteristic Active ->', value);
 
@@ -158,10 +136,6 @@ export class Television {
         callback (new Error(errorMessage));
       }
     });
-
-    const command = value ? 'POWR1   \r' : 'POWR0   \r';
-    this.platform.log.debug('Sending command: ', command);
-    this.port.write(command, handleError);
   }
 
   /**
@@ -178,16 +152,10 @@ export class Television {
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   getActive(callback: CharacteristicGetCallback) {
-    const handleError = (error: Error | null | undefined) => {
-      if (error) {
-        this.platform.log.error(error.message);
-        callback(error, false);
-      }
-    };
-
     this.platform.log.debug('Getting power state from TV');
 
-    this.parser.once('data', (data: string) => {
+    const command = 'POWR????\r';
+    this.serial.send(command, (data: string) => {
       if (data.includes('1') || data.includes('0') && !data.includes('000')) {
         const value = data.includes('1') ? true : false;
 
@@ -202,10 +170,6 @@ export class Television {
         callback (new Error(errorMessage), false);
       }
     });
-
-    const command = 'POWR????\r';
-    this.platform.log.debug('Sending command: ', command);
-    this.port.write(command, handleError);
   }
 
   /**
@@ -218,19 +182,16 @@ export class Television {
   ) {
     const thisInput = this.accessory.context.device.inputs[value as number];
 
-    const handleError = (error: Error | null | undefined) => {
-      if (error) {
-        this.platform.log.error(error.message);
-        callback(error);
-      }
-    };
+    const command = `IAVD${thisInput.id}   \r`;
 
-    this.parser.once('data', (data: string) => {
+    this.serial.send(command, (data: string) => {
       if (data) {
         this.platform.log.debug(
           'Set Characteristic Active Identifier -> ',
           value,
         );
+
+        this.states.ActiveIdentifier = value as number;
 
         // the first argument of the callback should be null if there are no errors
         callback(null);
@@ -240,10 +201,6 @@ export class Television {
         callback (new Error(errorMessage));
       }
     });
-
-    const command = `IAVD${thisInput.id}   \r`;
-    this.platform.log.debug('Sending command: ', command);
-    this.port.write(command, handleError);
   }
 
   /**
@@ -253,41 +210,29 @@ export class Television {
   getActiveIdentifier(
     callback: CharacteristicSetCallback,
   ) {
-    const handleError = (error: Error | null | undefined) => {
-      if (error) {
-        this.platform.log.error(error.message);
-        callback(error, false);
-      }
-    };
+    this.platform.log.debug('Getting input state from TV');
 
-    // TODO: The setTimeout is used because Homebridge queries both the power state and input state at the same time, and one command ends
-    // up getting lost.
-    // TODO: Need to add some kind of delay/cache the state when the TV is turned off
-    setTimeout(() => {
-      this.platform.log.debug('Getting input state from TV');
+    const command = 'IAVD?   \r';
+    this.serial.send(command, (data: string) => {
+      if (data.includes('0001') || data.includes('0002') || data.includes('0003') || data.includes('0004') || data.includes('0005') || data.includes('0006') || data.includes('0007') || data.includes('0008')) {
+        const id = parseInt(data);
 
-      this.parser.once('data', (data: string) => {
-        if (data.includes('0001') || data.includes('0002') || data.includes('0003') || data.includes('0004') || data.includes('0005') || data.includes('0006') || data.includes('0007') || data.includes('0008')) {
-          const id = parseInt(data);
+        // Get the internal ID of the input with the ID that matches what the TV returned
+        const value = this.accessory.context.device.inputs.findIndex((input: any) => input.id === id);
 
-          // Get the internal ID of the input with the ID that matches what the TV returned
-          const value = this.accessory.context.device.inputs.findIndex((input: any) => input.id === id);
-
-          this.platform.log.debug('Get Characteristic ActiveIdentifier ->', value);
+        this.platform.log.info('Get Characteristic ActiveIdentifier ->', value);
     
-          // the first argument of the callback should be null if there are no errors
-          // the second argument contains the current status of the device to return.
-          callback(null, value);
-        } else {
-          const errorMessage = `While attempting to get input state, serial command returned '${data}'`;
-          this.platform.log.error(errorMessage);
-          callback (new Error(errorMessage), 0);
-        }
-      });
-
-      const command = 'IAVD?   \r';
-      this.platform.log.debug('Sending command: ', command);
-      this.port.write(command, handleError);
-    }, 1000);
+        // the first argument of the callback should be null if there are no errors
+        // the second argument contains the current status of the device to return.
+        callback(null, value);
+      } else if (data.includes('ERR')) {
+        // The TV is likely off, use cached state
+        callback(null, this.states.ActiveIdentifier);
+      } else {
+        const errorMessage = `While attempting to get input state, serial command returned '${data}'`;
+        this.platform.log.error(errorMessage);
+        callback (new Error(errorMessage), 0);
+      }
+    });
   }
 }
